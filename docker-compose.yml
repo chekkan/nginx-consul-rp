@@ -1,0 +1,6 @@
+version: '2'
+services:
+  rproxy:
+    build: rproxy
+    ports:
+    - "8080:80"
