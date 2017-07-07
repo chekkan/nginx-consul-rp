@@ -4,3 +4,12 @@ services:
     build: rproxy
     ports:
     - "8080:80"
+    links:
+      - consul:consul
+    restart: always
+
+  consul:
+    image: consul:latest
+    restart: always
+    ports:
+      - "8500:8500"

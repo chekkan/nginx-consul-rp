@@ -1,0 +1,58 @@
+{
+  consul: "consul:8500",
+  logging: {
+    level: "DEBUG",
+    format: "default",
+    output: "stdout"
+  },
+  jobs: [
+    {
+      // this job is not advertised and has no health check. we'll never
+      // see a 'preStart healthy' event, just 'preStart exitSuccess'
+      name: "preStart",
+      exec: [
+        "consul-template", "-once", "-consul-addr", "consul:8500",
+        "-template", 
+        "/etc/containerpilot/nginx.conf.ctmpl:/etc/nginx/nginx.conf"
+      ],
+      restarts: "never", // default behavior
+    },
+    {
+      // this job is not advertised and has no health check. we'll never
+      // see a 'preStart healthy' event, just 'preStart exitSuccess'
+      name: "postStart",
+      exec: [
+        "consul-template", "-consul-addr", "consul:8500",
+        "-template", 
+        "/etc/containerpilot/nginx.conf.ctmpl:/etc/nginx/nginx.conf:nginx -s reload"
+      ],
+      restarts: "unlimited", // default behavior
+      when: {
+        // we'll wait for the "consul-agent healthy" event, which appears
+        // inside this container only as it's for a non-advertised job.
+        // note we don't need to script a poll+timeout.
+        source: "nginx",
+        once: "healthy",
+        timeout: "120s"
+      }
+    },
+    {
+        name: "nginx",
+        exec: "nginx",
+        port: 80,
+        interfaces: ["eth1", "eth0"],
+        restarts: "unlimited",
+        when: {
+          source: "preStart",
+          once: "exitSuccess"
+        },
+        health: {
+            exec: "/usr/bin/curl --fail -s -o /dev/null http://localhost:80/health",
+            interval: 5,
+            ttl: 10,
+            // the health check can have its own timeout
+            timeout: "10s"
+        }
+    }
+  ]
+}
