@@ -12,28 +12,23 @@
       name: "preStart",
       exec: [
         "consul-template", "-once", "-consul-addr", "consul:8500",
+        "-log-level", "debug",
         "-template", 
         "/etc/containerpilot/nginx.conf.ctmpl:/etc/nginx/nginx.conf"
       ],
-      restarts: "never", // default behavior
+      restarts: "never",
     },
     {
-      // this job is not advertised and has no health check. we'll never
-      // see a 'preStart healthy' event, just 'preStart exitSuccess'
-      name: "postStart",
+      name: "onConfigChange",
       exec: [
-        "consul-template", "-consul-addr", "consul:8500",
+        "consul-template", "-once", "-consul-addr", "consul:8500",
+        "-log-level", "debug",
         "-template", 
         "/etc/containerpilot/nginx.conf.ctmpl:/etc/nginx/nginx.conf:nginx -s reload"
       ],
-      restarts: "unlimited", // default behavior
+      restarts: "unlimited",
       when: {
-        // we'll wait for the "consul-agent healthy" event, which appears
-        // inside this container only as it's for a non-advertised job.
-        // note we don't need to script a poll+timeout.
-        source: "nginx",
-        once: "healthy",
-        timeout: "120s"
+        interval: "60s"
       }
     },
     {
@@ -48,7 +43,7 @@
         },
         health: {
             exec: "/usr/bin/curl --fail -s -o /dev/null http://localhost:80/health",
-            interval: 5,
+            interval: 20,
             ttl: 10,
             // the health check can have its own timeout
             timeout: "10s"
