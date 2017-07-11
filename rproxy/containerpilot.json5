@@ -1,5 +1,5 @@
 {
-  consul: "consul:8500",
+  consul: "{{ .CONSUL_PORT_8500_TCP_ADDR | default "consul"}}:8500",
   logging: {
     level: "DEBUG",
     format: "default",
@@ -11,8 +11,9 @@
       // see a 'preStart healthy' event, just 'preStart exitSuccess'
       name: "preStart",
       exec: [
-        "consul-template", "-once", "-consul-addr", "consul:8500",
-        "-log-level", "debug",
+        "consul-template", "-once", 
+        "-consul-addr", "{{ .CONSUL_PORT_8500_TCP_ADDR | default "consul"}}:8500",
+        "-log-level", "ERR",
         "-template", 
         "/etc/containerpilot/nginx.conf.ctmpl:/etc/nginx/nginx.conf"
       ],
@@ -21,8 +22,9 @@
     {
       name: "onConfigChange",
       exec: [
-        "consul-template", "-once", "-consul-addr", "consul:8500",
-        "-log-level", "debug",
+        "consul-template", "-once", 
+        "-consul-addr", "{{ .CONSUL_PORT_8500_TCP_ADDR | default "consul"}}:8500",
+        "-log-level", "ERR",
         "-template", 
         "/etc/containerpilot/nginx.conf.ctmpl:/etc/nginx/nginx.conf:nginx -s reload"
       ],
@@ -43,8 +45,8 @@
         },
         health: {
             exec: "/usr/bin/curl --fail -s -o /dev/null http://localhost:80/health",
-            interval: 20,
-            ttl: 10,
+            interval: 60,
+            ttl: 120,
             // the health check can have its own timeout
             timeout: "10s"
         }
